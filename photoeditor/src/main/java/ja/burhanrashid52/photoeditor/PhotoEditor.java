@@ -69,7 +69,7 @@ public class PhotoEditor implements BrushViewChangeListener, MultiTouchListener.
     private ColorFilter colorFilter = new ColorMatrixColorFilter(NEGATIVE);
 
 
-    private PhotoEditor(Builder builder) {
+    protected PhotoEditor(Builder builder) {
         this.context = builder.context;
         this.parentView = builder.parentView;
         this.imageView = builder.imageView;
@@ -1133,4 +1133,5 @@ public class PhotoEditor implements BrushViewChangeListener, MultiTouchListener.
         }
         return convertedEmojiList;
     }
+
 }
