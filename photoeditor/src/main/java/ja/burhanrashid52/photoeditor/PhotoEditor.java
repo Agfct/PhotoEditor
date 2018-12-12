@@ -5,6 +5,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.ColorFilter;
+import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Matrix;
 import android.graphics.Point;
@@ -66,7 +67,8 @@ public class PhotoEditor implements BrushViewChangeListener, MultiTouchListener.
     private int transparentPixelsClickThroughRadius;
     private Typeface mDefaultTextTypeface;
     private Typeface mDefaultEmojiTypeface;
-    private ColorFilter colorFilter = new ColorMatrixColorFilter(NEGATIVE);
+    private int hueValue = 0;
+    private ColorFilter matrixColorFilter = new ColorMatrixColorFilter(NEGATIVE);
 
 
     protected PhotoEditor(Builder builder) {
@@ -137,11 +139,7 @@ public class PhotoEditor implements BrushViewChangeListener, MultiTouchListener.
             @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
             @Override
             public void onDoubleTap() {
-                if(imageView.getColorFilter() == colorFilter) {
-                    imageView.clearColorFilter();
-                } else {
-                    imageView.setColorFilter(colorFilter);
-                }
+                setColorFilterOnImageView(imageView);
             }
         });
 
@@ -167,6 +165,22 @@ public class PhotoEditor implements BrushViewChangeListener, MultiTouchListener.
         addViewToParent(imageRootView, viewType);
     }
 
+    public void setColorFilterOnImageView(ImageView imageView) {
+        if((hueValue + 60) <= 360){
+            hueValue += 60;
+            imageView.setColorFilter(newColorMatrix(hueValue));
+            Log.d("PE","ColorFilter. hueValue "+ hueValue );
+        } else if (hueValue + 60 == 420) {
+            hueValue += 60;
+            imageView.setColorFilter(matrixColorFilter);
+            Log.d("PE","ColorFilter. matrix "+ hueValue );
+        } else {
+            hueValue = 0;
+            imageView.clearColorFilter();
+            Log.d("PE","ColorFilter. clear "+ hueValue );
+        }
+    }
+
     /**
      * Color matrix that flips the components (<code>-1.0f * c + 255 = 255 - c</code>)
      * and keeps the alpha intact.
@@ -177,6 +191,50 @@ public class PhotoEditor implements BrushViewChangeListener, MultiTouchListener.
             0,     0, -1.0f,    0, 255, // blue
             0,     0,     0, 1.0f,   0  // alpha
     };
+
+    /**
+     * Creates a HUE ajustment ColorFilter
+     * @param value degrees to shift the hue.
+     * @return
+     */
+    public static ColorFilter newColorMatrix(float value )
+    {
+        ColorMatrix cm = new ColorMatrix();
+        adjustHue(cm, value);
+
+        return new ColorMatrixColorFilter(cm);
+    }
+
+    /**
+     * @param cm
+     * @param value
+     */
+    public static void adjustHue(ColorMatrix cm, float value)
+    {
+        value = cleanValue(value, 180f) / 180f * (float) Math.PI;
+        if (value == 0)
+        {
+            return;
+        }
+        float cosVal = (float) Math.cos(value);
+        float sinVal = (float) Math.sin(value);
+        float lumR = 0.213f;
+        float lumG = 0.715f;
+        float lumB = 0.072f;
+        float[] mat = new float[]
+                {
+                        lumR + cosVal * (1 - lumR) + sinVal * (-lumR), lumG + cosVal * (-lumG) + sinVal * (-lumG), lumB + cosVal * (-lumB) + sinVal * (1 - lumB), 0, 0,
+                        lumR + cosVal * (-lumR) + sinVal * (0.143f), lumG + cosVal * (1 - lumG) + sinVal * (0.140f), lumB + cosVal * (-lumB) + sinVal * (-0.283f), 0, 0,
+                        lumR + cosVal * (-lumR) + sinVal * (-(1 - lumR)), lumG + cosVal * (-lumG) + sinVal * (lumG), lumB + cosVal * (1 - lumB) + sinVal * (lumB), 0, 0,
+                        0f, 0f, 0f, 1f, 0f,
+                        0f, 0f, 0f, 0f, 1f };
+        cm.postConcat(new ColorMatrix(mat));
+    }
+
+    protected static float cleanValue(float p_val, float p_limit)
+    {
+        return Math.min(p_limit, Math.max(-p_limit, p_val));
+    }
 
     /**
      * This add the text on the {@link PhotoEditorView} with provided parameters
